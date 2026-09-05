@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>דינו ראן 🦖</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#8ed6ff;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0008;z-index:5}
+.box{background:white;padding:25px;border-radius:20px;text-align:center;width:75%;max-width:320px}
+h1{margin:0 0 10px} button{border:0;border-radius:14px;padding:14px 28px;font-size:20px;background:#31ad4b;color:white}
+#hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;font-weight:bold;font-size:18px;z-index:2}
+#buttons{position:fixed;bottom:18px;left:0;right:0;display:flex;justify-content:space-between;padding:0 20px;z-index:3}
+.ctrl{width:75px;height:75px;border-radius:50%;padding:0;background:#0009;font-size:28px}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+<span>🪙 <b id="score">0</b></span>
+<span>❤️ <b id="lives">3</b></span>
+</div>
+
+<div id="buttons">
+<button class="ctrl" id="left">⬅️</button>
+<button class="ctrl" id="jump">⬆️</button>
+<button class="ctrl" id="right">➡️</button>
+</div>
+
+<div id="start">
+<div class="box">
+<h1>🦖 דינו ראן</h1>
+<p>ברח מהדינוזאורים ואסוף מטבעות!</p>
+<button id="play">התחל לשחק</button>
+<p>אפשר גם להשתמש בחיצים במקלדת.</p>
+</div>
+</div>
+
+<script>
+const c=document.getElementById("game"),x=c.getContext("2d");
+let W,H,playing=false,score=0,lives=3,player=1,target=1,jumping=0;
+let dinos=[],coins=[],last=0,spawn=0;
+
+function size(){W=innerWidth;H=innerHeight;c.width=W;c.height=H}
+addEventListener("resize",size);size();
+
+function laneX(n){return W*.2+n*W*.3}
+
+function reset(){
+ score=0;lives=3;player=1;target=1;jumping=0;dinos=[];coins=[];
+ for(let i=0;i<8;i++) coins.push({lane:Math.floor(Math.random()*3),y:-i*120-100});
+ updateHud();
+}
+
+function updateHud(){
+ document.getElementById("score").textContent=score;
+ document.getElementById("lives").textContent=lives;
+}
+
+function move(n){if(playing)target=Math.max(0,Math.min(2,target+n))}
+function jump(){if(playing&&jumping<=0)jumping=1}
+
+document.getElementById("left").onclick=()=>move(-1);
+document.getElementById("right").onclick=()=>move(1);
+document.getElementById("jump").onclick=jump;
+addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft")move(-1);
+ if(e.key==="ArrowRight")move(1);
+ if(e.key==="ArrowUp"||e.key===" ")jump();
+});
+
+document.getElementById("play").onclick=()=>{
+ reset();playing=true;document.getElementById("start").style.display="none";
+};
+
+function draw(){
+ x.clearRect(0,0,W,H);
+ // sky
+ x.fillStyle="#8ed6ff";x.fillRect(0,0,W,H);
+ // jungle
+ x.fillStyle="#49a942";x.fillRect(0,H*.55,W,H*.45);
+ for(let i=0;i<16;i++){
+   x.fillStyle="#258033";
+   x.beginPath();x.arc((i*97)%W,H*.55+(i%5)*30,35,0,7);x.fill();
+ }
+ // track
+ x.fillStyle="#b99362";
+ x.beginPath();x.moveTo(W*.12,H);x.lineTo(W*.28,0);x.lineTo(W*.72,0);x.lineTo(W*.88,H);x.closePath();x.fill();
+ // lane lines
+ x.strokeStyle="#8b704d";x.lineWidth=3;
+ for(let n=1;n<3;n++){x.beginPath();x.moveTo(W*(.12+n*.253),H);x.lineTo(W*(.28+n*.22),0);x.stroke()}
+ // coins
+ for(const q of coins){
+   x.fillStyle="#ffd52e";x.beginPath();x.arc(laneX(q.lane),q.y,11,0,7);x.fill();
+   x.fillStyle="#fff";x.font="13px Arial";x.textAlign="center";x.fillText("★",laneX(q.lane),q.y+5);
+ }
+ // dinos
+ for(const d of dinos){
+   x.font="48px serif";x.textAlign="center";x.fillText("🦖",laneX(d.lane),d.y);
+ }
+ // player
+ let py=H*.82;
+ if(jumping>0)py-=90;
+ x.font="48px serif";x.textAlign="center";x.fillText("🏃",laneX(Math.round(player)),py);
+}
+
+function frame(t){
+ let dt=Math.min((t-last)/1000,.04);last=t;
+ if(playing){
+   player+=(target-player)*Math.min(1,dt*12);
+   if(jumping>0){jumping+=dt*3;if(jumping>1)jumping=-1}
+   else if(jumping<0)jumping+=dt*2;
+   const speed=180+score*.4;
+   coins.forEach(q=>q.y+=speed*dt);
+   dinos.forEach(d=>d.y+=speed*dt);
+   spawn-=dt;
+   if(spawn<=0){
+     dinos.push({lane:Math.floor(Math.random()*3),y:-50});
+     spawn=.9;
+   }
+   coins=coins.filter(q=>{
+     if(q.y>H*.76&&q.y<H*.88&&Math.abs(q.lane-Math.round(player))<.2){
+       score+=10;updateHud();return false;
+     }
+     return q.y<H+50;
+   });
+   if(Math.random()<dt*.9)coins.push({lane:Math.floor(Math.random()*3),y:-20});
+   dinos=dinos.filter(d=>{
+     if(!d.hit&&d.y>H*.73&&d.y<H*.87&&Math.abs(d.lane-Math.round(player))<.2&&jumping<=0){
+       d.hit=true;lives--;updateHud();
+       if(lives<=0){
+         playing=false;
+         setTimeout(()=>{
+           document.querySelector("#start h1").textContent="😵 המשחק נגמר";
+           document.querySelector("#start p").textContent="הניקוד שלך: "+score;
+           document.getElementById("play").textContent="שחק שוב";
+           document.getElementById("start").style.display="flex";
+         },100);
+       }
+     }
+     return d.y<H+70&&!d.hit;
+   });
+   score+=Math.floor(dt*2);updateHud();
+ }
+ draw();requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
