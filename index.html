@@ -133,7 +133,7 @@ function draw(){
  // player
  let py=H*.82;
  if(jumping>0)py-=90;
- x.font="48px serif";x.textAlign="center";x.fillText("🏃",laneX(Math.round(player)),py);
+ x.font="48px serif";x.textAlign="center";x.fillText("🏃",laneX(player),py);
 }
 
 function frame(t){
@@ -151,14 +151,15 @@ function frame(t){
      spawn=.9;
    }
    coins=coins.filter(q=>{
-     Math.abs(q.lane-Math.round(player))<.2
-       score+=10;updateHud();return false;
-     }
-     return q.y<H+50;
-   });
+  if(q.y>H*.76&&q.y<H*.88&&Math.abs(q.lane-player)<.25){
+    score+=10;updateHud();return false;
+  }
+  return q.y<H+50;
+});
    if(Math.random()<dt*.9)coins.push({lane:Math.floor(Math.random()*3),y:-20});
    dinos=dinos.filter(d=>{
-     Math.abs(d.lane-Math.round(player))<.28
+  if(!d.hit&&d.y>H*.73&&d.y<H*.87&&Math.abs(d.lane-player)<.28&&jumping<=0){
+
        d.hit=true;lives--;updateHud();
        if(lives<=0){
          playing=false;
