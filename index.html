@@ -21,6 +21,7 @@ h1{margin:0 0 10px} button{border:0;border-radius:14px;padding:14px 28px;font-si
 <div id="hud">
 <span>🪙 <b id="score">0</b></span>
 <span>❤️ <b id="lives">3</b></span>
+ <span>🏆 שלב <b id="level">1</b> | 🪙 <b id="levelCoins">0</b>/50</span>
 </div>
 
 <div id="buttons">
@@ -41,7 +42,7 @@ h1{margin:0 0 10px} button{border:0;border-radius:14px;padding:14px 28px;font-si
 <script>
 const c=document.getElementById("game"),x=c.getContext("2d");
 let W,H,playing=false,score=0,lives=3,player=1,target=1,jumping=0;
-let dinos=[],coins=[],last=0,spawn=0;
+let dinos=[],coins=[],last=0,spawn=0,level=1,levelCoins=0;
 
 function size(){W=innerWidth;H=innerHeight;c.width=W;c.height=H}
 addEventListener("resize",size);size();
@@ -49,7 +50,7 @@ addEventListener("resize",size);size();
 function laneX(n){return W*.2+n*W*.3}
 
 function reset(){
- score=0;lives=3;player=1;target=1;jumping=0;dinos=[];coins=[];
+ score=0;lives=3;player=1;target=1;jumping=0;dinos=[];coins=[];level=1;levelCoins=0;
  for(let i=0;i<8;i++) coins.push({lane:Math.floor(Math.random()*3),y:-i*120-100});
  updateHud();
 }
@@ -57,6 +58,8 @@ function reset(){
 function updateHud(){
  document.getElementById("score").textContent=score;
  document.getElementById("lives").textContent=lives;
+ document.getElementById("level").textContent=level;
+document.getElementById("levelCoins").textContent=levelCoins;
 }
 
 function move(n){if(playing)target=Math.max(0,Math.min(2,target+n))}
@@ -145,17 +148,26 @@ function frame(t){
   jumping+=dt*2;
   if(jumping>=0) jumping=0;
 }
-   const speed=180+score*.4;
+   const speed=180+(level-1)*25+score*.08;
    coins.forEach(q=>q.y+=speed*dt);
    dinos.forEach(d=>d.y+=speed*dt);
    spawn-=dt;
    if(spawn<=0){
      dinos.push({lane:Math.floor(Math.random()*3),y:-50});
-     spawn=.9;
+     spawn=Math.max(.38,.9-(level-1)*.10);
    }
    coins=coins.filter(q=>{
   if(q.y>H*.76&&q.y<H*.88&&Math.abs(q.lane-player)<.25){
-    score+=10;updateHud();return false;
+    score+=10;
+levelCoins++;
+
+if(levelCoins>=50){
+  level++;
+  levelCoins=0;
+}
+
+updateHud();
+return false;
   }
   return q.y<H+50;
 });
